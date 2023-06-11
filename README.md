@@ -1,2 +1,2 @@
 # WP-Enkryptor
-A WP Plugin that automatically compresses and encrypts files before they are uploaded to a website using 256-bit AES encryption and can only be decrypted by the system administrator.
+A WP Plugin that automatically compresses and encrypts files before they are uploaded to a website using 256-bit AES encryption and can only be decrypted by the system administrator. Once the plugin is installed and activated in WordPress, the administrator will be able to set the universal password for all encrypted files by going to Settings > Automatic File Compression and Encryption. 
