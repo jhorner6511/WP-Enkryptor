@@ -4,7 +4,7 @@
  * Description: This plugin automatically compresses and encrypts files before they are uploaded to WordPress. The encryption is done using 256-bit AES encryption and the password is only accessible by the administrator of the website.
  * Author: Johnathon M. Horner
  * Author URI: https://github.com/jhorner6511
- * License: GNU v3.0
+ * License: GPL v3.0
  */
 
 add_action( 'admin_menu', 'add_plugin_options_page' );
