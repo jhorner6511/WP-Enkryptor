@@ -3,89 +3,66 @@
  * Plugin Name: WordPress Automatic File Compression and Encryption
  * Description: This plugin automatically compresses and encrypts files before they are uploaded to WordPress. The encryption is done using 256-bit AES encryption and the password is only accessible by the administrator of the website.
  * Author: Johnathon M. Horner
- * Author URI: https://github.com/6511
- * License: GNU v3
+ * Author URI: https://github.com/jhorner6511
+ * License: GNU v3.0
  */
 
-add_action( 'wp_handle_upload_prefilter', 'compress_and_encrypt_file' );
+add_action( 'admin_menu', 'add_plugin_options_page' );
 
 /**
- * Compresses and encrypts a file before it is uploaded to WordPress.
- *
- * @param  object $file The file object.
- * @return object $file The updated file object.
+ * Adds a new menu page under Settings.
  */
-function compress_and_encrypt_file( $file ) {
+function add_plugin_options_page() {
 
-    // Get the password from the wp_options table.
+    // Add a new top-level menu page under Settings.
+    add_menu_page(
+        'Automatic File Compression and Encryption',
+        'Automatic File Compression and Encryption',
+        'manage_options',
+        'wp_automatic_file_encryption',
+        'plugin_options_page'
+    );
+}
+
+/**
+ * Renders the plugin options page.
+ */
+function plugin_options_page() {
+
+    // Get the current password.
     $password = get_option( 'wp_automatic_file_encryption_password' );
 
-    // If the password is not set, return the file without compressing or encrypting it.
+    // If the password is not set, show a message prompting the administrator to set a password.
     if ( empty( $password ) ) {
-        return $file;
+        ?>
+        <div id="message" class="error"><p>Please set a password for automatic file encryption.</p></div>
+        <?php
+    } else {
+        // Show a form where the administrator can change the password.
+        ?>
+        <form action="options.php" method="POST">
+            <?php wp_nonce_field( 'update_wp_automatic_file_encryption_password' ); ?>
+            <input type="password" name="wp_automatic_file_encryption_password" value="<?php echo esc_attr( $password ); ?>" />
+            <input type="submit" name="submit" value="Save Password" />
+        </form>
+        <?php
     }
-
-    // Compress the file.
-    $compressed_file = compress_file( $file );
-
-    // Encrypt the file.
-    $encrypted_file = encrypt_file( $compressed_file, $password );
-
-    // Update the file object with the encrypted file path.
-    $file->file = $encrypted_file;
-
-    // Return the updated file object.
-    return $file;
 }
 
 /**
- * Compresses a file using the Gzip algorithm.
- *
- * @param  string $file The path to the file to compress.
- * @return string The path to the compressed file.
+ * Updates the password for automatic file encryption.
  */
-function compress_file( $file ) {
+function update_wp_automatic_file_encryption_password() {
 
-    // Create a new Gzip output stream.
-    $gz = gzopen( $file . '.gz', 'wb' );
-
-    // Open the file for reading.
-    $f = fopen( $file, 'rb' );
-
-    // Read the file and write it to the Gzip output stream.
-    while ( ! feof( $f ) ) {
-        gzwrite( $gz, fgets( $f ) );
+    // Verify the nonce.
+    if ( !wp_verify_nonce( $_POST['_wpnonce'], 'update_wp_automatic_file_encryption_password' ) ) {
+        return;
     }
 
-    // Close the files.
-    fclose( $f );
-    gzclose( $gz );
+    // Update the password.
+    update_option( 'wp_automatic_file_encryption_password', $_POST['wp_automatic_file_encryption_password'] );
 
-    // Return the path to the compressed file.
-    return $file . '.gz';
-}
-
-/**
- * Encrypts a file using the AES algorithm.
- *
- * @param  string $file The path to the file to encrypt.
- * @param  string $password The password to use for encryption.
- * @return string The path to the encrypted file.
- */
-function encrypt_file( $file, $password ) {
-
-    // Create a new OpenSSL encryption object.
-    $cipher = openssl_encrypt( file_get_contents( $file ), 'AES-256-CBC', $password, OPENSSL_RAW_DATA );
-
-    // Create a new file for the encrypted data.
-    $encrypted_file = fopen( $file . '.encrypted', 'wb' );
-
-    // Write the encrypted data to the file.
-    fwrite( $encrypted_file, $cipher );
-
-    // Close the file.
-    fclose( $encrypted_file );
-
-    // Return the path to the encrypted file.
-    return $file . '.encrypted';
+    // Redirect the administrator back to the options page.
+    wp_redirect( admin_url( 'options-general.php?page=wp_automatic_file_encryption' ) );
+    exit;
 }
