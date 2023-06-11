@@ -1,0 +1,91 @@
+<?php
+/**
+ * Plugin Name: WordPress Automatic File Compression and Encryption
+ * Description: This plugin automatically compresses and encrypts files before they are uploaded to WordPress. The encryption is done using 256-bit AES encryption and the password is only accessible by the administrator of the website.
+ * Author: Johnathon M. Horner
+ * Author URI: https://github.com/6511
+ * License: GNU v3
+ */
+
+add_action( 'wp_handle_upload_prefilter', 'compress_and_encrypt_file' );
+
+/**
+ * Compresses and encrypts a file before it is uploaded to WordPress.
+ *
+ * @param  object $file The file object.
+ * @return object $file The updated file object.
+ */
+function compress_and_encrypt_file( $file ) {
+
+    // Get the password from the wp_options table.
+    $password = get_option( 'wp_automatic_file_encryption_password' );
+
+    // If the password is not set, return the file without compressing or encrypting it.
+    if ( empty( $password ) ) {
+        return $file;
+    }
+
+    // Compress the file.
+    $compressed_file = compress_file( $file );
+
+    // Encrypt the file.
+    $encrypted_file = encrypt_file( $compressed_file, $password );
+
+    // Update the file object with the encrypted file path.
+    $file->file = $encrypted_file;
+
+    // Return the updated file object.
+    return $file;
+}
+
+/**
+ * Compresses a file using the Gzip algorithm.
+ *
+ * @param  string $file The path to the file to compress.
+ * @return string The path to the compressed file.
+ */
+function compress_file( $file ) {
+
+    // Create a new Gzip output stream.
+    $gz = gzopen( $file . '.gz', 'wb' );
+
+    // Open the file for reading.
+    $f = fopen( $file, 'rb' );
+
+    // Read the file and write it to the Gzip output stream.
+    while ( ! feof( $f ) ) {
+        gzwrite( $gz, fgets( $f ) );
+    }
+
+    // Close the files.
+    fclose( $f );
+    gzclose( $gz );
+
+    // Return the path to the compressed file.
+    return $file . '.gz';
+}
+
+/**
+ * Encrypts a file using the AES algorithm.
+ *
+ * @param  string $file The path to the file to encrypt.
+ * @param  string $password The password to use for encryption.
+ * @return string The path to the encrypted file.
+ */
+function encrypt_file( $file, $password ) {
+
+    // Create a new OpenSSL encryption object.
+    $cipher = openssl_encrypt( file_get_contents( $file ), 'AES-256-CBC', $password, OPENSSL_RAW_DATA );
+
+    // Create a new file for the encrypted data.
+    $encrypted_file = fopen( $file . '.encrypted', 'wb' );
+
+    // Write the encrypted data to the file.
+    fwrite( $encrypted_file, $cipher );
+
+    // Close the file.
+    fclose( $encrypted_file );
+
+    // Return the path to the encrypted file.
+    return $file . '.encrypted';
+}
